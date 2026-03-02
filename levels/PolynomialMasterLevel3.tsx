@@ -12,15 +12,11 @@ type SortPair = {
 
 const PAIRS: SortPair[] = [
   { id: 1, exp1: '2x + 3', exp2: 'x + x + 3', isEquivalent: true, hint: 'x + x simplifies to 2x.' },
-  { id: 2, exp1: 'x² + 4x + 4', exp2: '(x + 2)²', isEquivalent: true, hint: 'Combine like terms by degree.' },
+  { id: 2, exp1: 'x² + 4x + 4', exp2: '(x + 2)²', isEquivalent: true, hint: 'Expand (x + 2)² to check.' },
   { id: 3, exp1: '3x - 5', exp2: '3(x - 5)', isEquivalent: false, hint: 'Check the distribution: 3(x - 5) = 3x - 15.' },
   { id: 4, exp1: '2(x + 3)', exp2: '2x + 6', isEquivalent: true, hint: 'Distribute the 2 to both x and 3.' },
   { id: 5, exp1: 'x² - x + 1', exp2: 'x² + 1', isEquivalent: false, hint: 'The middle term "-x" matters!' },
   { id: 6, exp1: '4x + 2', exp2: '2(2x + 1)', isEquivalent: true, hint: '2(2x) is 4x and 2(1) is 2.' },
-  { id: 7, exp1: 'x - (x - 3)', exp2: '3', isEquivalent: true, hint: 'Distribute the negative: x - x + 3 = 3.' },
-  { id: 8, exp1: 'x(x + 1)', exp2: 'x² + x', isEquivalent: true, hint: 'Multiply x by both terms inside.' },
-  { id: 9, exp1: '(x + 1)(x + 1)', exp2: 'x² + 1', isEquivalent: false, hint: 'You missed the middle terms! (x+1)² = x² + 2x + 1.' },
-  { id: 10, exp1: '5x + 2', exp2: 'x + 5 + 2x', isEquivalent: false, hint: 'Combine like terms by degree.' },
 ];
 
 const DraggablePair: React.FC<{ pair: SortPair; validationStatus?: 'correct' | 'incorrect' }> = ({ pair, validationStatus }) => {
@@ -112,21 +108,22 @@ const StarIcon: React.FC<{ filled: boolean; className?: string }> = ({ filled, c
     </svg>
   );
 
-const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress }) => {
+const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress, onNext }) => {
   const [taskNum, setTaskNum] = useState<1 | 2>(() => partialProgress?.taskNum || 1);
-  const [maxTaskNum, setMaxTaskNum] = useState<number>(() => partialProgress?.maxTaskNum || 1);
+  const [maxTaskReached, setMaxTaskReached] = useState<number>(() => partialProgress?.maxTaskReached || 1);
   const [sortAssignments, setSortAssignments] = useState<Record<number, 'equiv' | 'not-equiv'>>({});
   const [validation, setValidation] = useState<Record<number, 'correct' | 'incorrect'>>({});
   const [feedback, setFeedback] = useState<{ type: 'correct' | 'incorrect'; msg?: string } | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [errorCount, setErrorCount] = useState<number>(() => partialProgress?.errorCount || 0);
 
   const isCompletedRef = useRef(false);
 
   useEffect(() => {
     if (!isCompletedRef.current && onSavePartialProgress && !isCompleted) {
-      onSavePartialProgress({ taskNum, sortAssignments, maxTaskNum });
+      onSavePartialProgress({ taskNum, sortAssignments, maxTaskReached, errorCount });
     }
-  }, [taskNum, sortAssignments, onSavePartialProgress, maxTaskNum, isCompleted]);
+  }, [taskNum, sortAssignments, onSavePartialProgress, maxTaskReached, isCompleted, errorCount]);
 
   const handleDrop = (id: number, bin: 'equiv' | 'not-equiv') => {
     setSortAssignments(prev => ({ ...prev, [id]: bin }));
@@ -146,18 +143,21 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
       }
       const isCorrect = (assigned === 'equiv' && pair.isEquivalent) || (assigned === 'not-equiv' && !pair.isEquivalent);
       newValidation[pair.id] = isCorrect ? 'correct' : 'incorrect';
-      if (!isCorrect) allCorrect = false;
+      if (!isCorrect) {
+        allCorrect = false;
+        setErrorCount(prev => prev + 1);
+      }
     });
     setValidation(newValidation);
     if (allCorrect && Object.keys(sortAssignments).length === PAIRS.length) {
       setFeedback({ type: 'correct' });
       setTimeout(() => {
         setTaskNum(2);
-        setMaxTaskNum(2);
+        setMaxTaskReached(2);
         setFeedback(null);
-      }, 2000);
+      }, 1500);
     } else {
-      setFeedback({ type: 'incorrect', msg: "Check the 'red lined' items! Some expressions need distribution or simplification to match." });
+      setFeedback({ type: 'incorrect', msg: "You are almost there! Check the expansion carefully." });
       setTimeout(() => setFeedback(null), 5000);
     }
   };
@@ -169,28 +169,34 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
         setIsCompleted(true);
       }, 1500);
     } else {
-      setFeedback({ type: 'incorrect', msg: "Think of the shape as two rectangles. Top: 4x · 2x = 8x². Bottom: 2x · 3x = 6x². 8x² + 6x² = 14x²." });
+      setErrorCount(prev => prev + 1);
+      setFeedback({ type: 'incorrect', msg: "Draw one line to divide the shape into two rectangles. Find the area of each rectangle, then add them." });
       setTimeout(() => setFeedback(null), 6000);
     }
   };
 
+  const calculateStars = () => {
+    if (errorCount <= 1) return 3;
+    if (errorCount === 2) return 2;
+    return 1;
+  };
+
   const resetLevel = () => {
     setTaskNum(1);
-    setMaxTaskNum(1);
+    setMaxTaskReached(1);
     setSortAssignments({});
     setValidation({});
     setFeedback(null);
     setIsCompleted(false);
+    setErrorCount(0);
     onSavePartialProgress?.(null);
   };
+
+  const handleReplay = resetLevel;
 
   return (
     <div className="flex flex-col items-center justify-start min-h-full p-8 pt-4 text-white font-sans max-w-7xl mx-auto overflow-x-hidden relative">
       <div className="w-full flex flex-col items-center mb-10 border-b border-gray-800 pb-6">
-        <h1 className="text-2xl md:text-3xl font-black text-sky-400 italic tracking-tighter uppercase text-center mb-4">
-          Mastery Challenge
-        </h1>
-        
         {/* Navigation Buttons */}
         <div className="flex justify-center gap-4 mb-6">
           <button 
@@ -199,16 +205,15 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
             title="Task 1: Compare & Sort"
           />
           <button 
-            onClick={() => setTaskNum(2)}
-            className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center ${taskNum === 2 ? 'bg-sky-500 border-sky-300 scale-125 shadow-glow' : 'bg-sky-900 border-sky-600 hover:bg-sky-500'}`}
-            title="Task 2: Final Area Problem"
+            onClick={() => maxTaskReached >= 2 && setTaskNum(2)}
+            disabled={maxTaskReached < 2}
+            className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center ${
+              taskNum === 2 ? 'bg-sky-500 border-sky-300 scale-125 shadow-glow' : 
+              maxTaskReached >= 2 ? 'bg-sky-900 border-sky-600 hover:bg-sky-500' : 
+              'bg-gray-700 border-gray-600 cursor-not-allowed opacity-50'
+            }`}
+            title={maxTaskReached >= 2 ? "Task 2: Final Area Problem" : "Complete Task 1 first"}
           />
-        </div>
-
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-slate-400 text-sm font-bold uppercase tracking-widest text-center">
-            {taskNum === 1 ? 'Identify equivalent algebraic pairs' : 'Solve a multi-step composite area problem'}
-          </p>
         </div>
       </div>
 
@@ -216,7 +221,6 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
         <div className="w-full animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl mb-10 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-sky-300 mb-1 italic">Compare and Sort</h2>
               <p className="text-slate-400 italic">Compare the expressions. <strong className="text-white">Drag each pair into the correct box.</strong></p>
             </div>
             <button 
@@ -224,13 +228,12 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
               disabled={Object.keys(sortAssignments).length < PAIRS.length}
               className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-gray-600 px-8 py-3 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-95 uppercase tracking-tighter"
             >
-              Check All
+              Check
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-slate-900/50 p-4 rounded-3xl border border-slate-800 min-h-[500px] shadow-inner">
-              <h3 className="text-slate-500 font-bold uppercase text-center text-xs mb-4 tracking-widest italic">Expression Pairs</h3>
               <div className="flex flex-col gap-3">
                 {PAIRS.map(pair => (
                   (!sortAssignments[pair.id] || validation[pair.id] === 'incorrect') && 
@@ -261,8 +264,7 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
       ) : (
         <div className="w-full animate-fade-in flex flex-col items-center">
           <div className="bg-slate-900 border-l-4 border-emerald-500 p-6 rounded-r-2xl mb-12 w-full shadow-xl">
-             <h2 className="text-2xl font-bold text-emerald-400 italic uppercase tracking-tighter">Find the Area</h2>
-             <p className="text-slate-300 italic">Apply your mastery. Which expression represents the <span className="underline decoration-2 underline-offset-4 font-bold text-white uppercase tracking-tighter">area</span> of this shape?</p>
+             <p className="text-slate-200 text-xl md:text-2xl font-bold">Which expression represents the area of this shape?</p>
           </div>
 
           <div className="flex flex-col lg:flex-row items-center gap-16 w-full max-w-5xl">
@@ -293,15 +295,12 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
                 <button
                   key={opt.label}
                   onClick={() => handleGeoAnswer(opt.value)}
-                  className={`p-6 rounded-2xl border-2 transition-all text-left flex items-center group shadow-md active:scale-95 ${
+                  className={`p-6 rounded-2xl border-2 transition-all text-center flex items-center justify-center group shadow-md active:scale-95 ${
                     feedback?.type === 'correct' && opt.value === '14x²'
                       ? 'bg-emerald-600 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3)]'
                       : 'bg-slate-900 border-slate-800 hover:border-sky-500'
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-sky-400 mr-6 group-hover:bg-sky-500 group-hover:text-white transition-colors uppercase italic">
-                    {opt.label}
-                  </div>
                   <span className="text-2xl font-mono font-bold tracking-tight uppercase">{opt.value}</span>
                 </button>
               ))}
@@ -311,23 +310,51 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
       )}
 
       {isCompleted && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
+        <div className="fixed inset-0 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
           <div className="bg-slate-900 rounded-[3rem] shadow-2xl p-12 max-w-lg w-full text-center text-white border-[12px] border-slate-800/50">
-            <h2 className="text-6xl font-black mb-4 italic tracking-tighter text-sky-400 uppercase">Mastery complete!</h2>
-            <div className="flex justify-center gap-3 mb-6">
-              {[1, 2, 3].map(i => <StarIcon key={i} filled={true} />)}
-            </div>
-            <div className="flex flex-col gap-4 mt-8">
-                <button onClick={resetLevel} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
-                <button onClick={() => { isCompletedRef.current = true; onComplete(3); }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Back to Map</button>
-            </div>
+            {(() => {
+              const stars = calculateStars();
+              return (
+                <>
+                  <h2 className="text-sky-400 text-5xl font-black mb-4 italic tracking-tighter uppercase">
+                    {stars === 1 ? "Good Effort!" : "Level Complete!"}
+                  </h2>
+                  <div className="flex justify-center gap-3 mb-6">
+                    {[1, 2, 3].map(i => <StarIcon key={i} className={`w-20 h-20 ${i <= stars ? "text-yellow-400" : "text-gray-700"}`} filled={i <= stars} />)}
+                  </div>
+                  {stars === 1 && (
+                    <p className="text-slate-300 text-lg mb-6">
+                      You completed the level, but made several mistakes. Try again to improve your score!
+                    </p>
+                  )}
+                  {stars === 2 && (
+                    <p className="text-slate-300 text-lg mb-6">
+                      Great job! You made a couple of errors, but you can replay to get 3 stars.
+                    </p>
+                  )}
+                  <div className="flex flex-col gap-4 mt-8">
+                    {stars === 1 ? (
+                      <>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Save & Exit</button>
+                        <button onClick={handleReplay} className="w-full bg-slate-700 hover:bg-slate-600 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Replay</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={handleReplay} className="w-full bg-slate-700 hover:bg-slate-600 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Replay</button>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                      </>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
 
       {feedback && !isCompleted && (
-        <div className={`fixed bottom-24 px-12 py-5 rounded-full font-black text-2xl shadow-2xl z-[200] border-4 flex items-center gap-4 ${
-          feedback.type === 'correct' ? 'bg-emerald-500 border-emerald-300 animate-bounce uppercase italic tracking-tighter' : 'bg-rose-600 border-rose-400 animate-shake italic'
+        <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 px-12 py-5 rounded-[2rem] font-black text-2xl shadow-2xl z-[200] border-4 flex items-center gap-4 max-w-2xl ${
+          feedback.type === 'correct' ? 'bg-emerald-500 border-emerald-300 uppercase italic tracking-tighter' : 'bg-rose-600 border-rose-400 animate-shake italic'
         }`}>
           {feedback.type === 'correct' ? '✨ Perfect!' : feedback.msg}
         </div>

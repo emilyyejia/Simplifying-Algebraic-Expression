@@ -110,7 +110,7 @@ const DropBin: React.FC<{
   );
 };
 
-const PolynomialsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress }) => {
+const PolynomialsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress, onNext }) => {
   const [phase, setPhase] = useState<1 | 2>(() => partialProgress?.phase || 1);
   const [maxReachedPhase, setMaxReachedPhase] = useState<number>(() => partialProgress?.maxReachedPhase || 1);
   const [assignments, setAssignments] = useState<Record<string, string>>(() => partialProgress?.assignments || {});
@@ -172,9 +172,9 @@ const PolynomialsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, 
     if (!allCorrect) {
       setErrorCount(prev => prev + errorsThisCheck);
       if (phase === 1) {
-        setHelpfulFeedback("Remember: Monomials have only one term (no + or - signs), while Binomials have two terms separated by + or -.");
+        setHelpfulFeedback("Try again! A monomial has only one term (there is no + or – sign). A binomial has two terms, and they are separated by a + or – sign.");
       } else if (phase === 2) {
-        setHelpfulFeedback("Try again! The degree of a term is the total number of variable powers — add the exponents (and remember a variable without a number has an exponent of 1).");
+        setHelpfulFeedback("Try again! To find the degree of a term, add the exponents on the variables. If a variable has no exponent, it has an exponent of 1.");
       }
     }
 
@@ -223,9 +223,14 @@ const PolynomialsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, 
             title="Phase 1: Sorting Polynomials"
           />
           <button 
-            onClick={() => setPhase(2)}
-            className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center ${phase === 2 ? 'bg-sky-500 border-sky-300 scale-125' : 'bg-sky-900 border-sky-600 hover:bg-sky-500'}`}
-            title="Phase 2: Sorting Degrees"
+            onClick={() => maxReachedPhase >= 2 && setPhase(2)}
+            disabled={maxReachedPhase < 2}
+            className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center ${
+              phase === 2 ? 'bg-sky-500 border-sky-300 scale-125' : 
+              maxReachedPhase >= 2 ? 'bg-sky-900 border-sky-600 hover:bg-sky-500' : 
+              'bg-gray-700 border-gray-600 cursor-not-allowed opacity-50'
+            }`}
+            title={maxReachedPhase >= 2 ? "Phase 2: Sorting Degrees" : "Complete Phase 1 first"}
           />
         </div>
 
@@ -238,7 +243,6 @@ const PolynomialsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, 
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full items-start">
         <div className="bg-gray-900/50 p-6 rounded-[2.5rem] border border-gray-800 min-h-[400px] shadow-inner">
-          <h3 className="text-center text-slate-500 font-bold uppercase tracking-widest text-xs mb-6">Expressions Deck</h3>
           <div className="flex flex-wrap gap-4 justify-center">
             {items.map(item => {
               const isAssigned = !!assignments[item.id];
@@ -264,7 +268,7 @@ const PolynomialsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, 
 
       <div className="w-full mt-12 flex flex-col items-center gap-6">
         {helpfulFeedback && (
-          <div className="bg-indigo-900/50 border-l-4 border-indigo-400 p-4 rounded-r-xl max-w-2xl animate-fade-in">
+          <div className="bg-indigo-900/50 border-l-4 border-indigo-400 p-6 rounded-r-xl max-w-2xl mx-auto animate-fade-in mb-6">
             <p className="text-indigo-200 text-lg italic font-medium">{helpfulFeedback}</p>
           </div>
         )}
@@ -280,24 +284,36 @@ const PolynomialsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, 
       </div>
 
       {isGameOver && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
+        <div className="fixed inset-0 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
           <div className="bg-slate-900 rounded-[3rem] shadow-2xl p-12 max-w-lg w-full text-center text-white border-[12px] border-slate-800/50">
             {(() => {
               const stars = calculateStars();
-              const isLow = stars === 1;
               return (
                 <>
-                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${isLow ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
-                    {isLow ? "Good effort!" : "Challenge complete!"}
+                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${stars === 1 ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
+                    {stars === 1 ? "Good Effort!" : "Level Complete!"}
                   </h2>
-                  {isLow && <p className="text-lg text-white font-black mb-8 uppercase tracking-tight">Get 2 stars to unlock the next level</p>}
+                  {stars === 1 && <p className="text-lg text-white font-black mb-8 uppercase tracking-tight">You need 2 stars to unlock the next level.</p>}
                   <div className="flex justify-center gap-3 mb-6">
                     {[1, 2, 3].map(i => <StarIcon key={i} className={`w-20 h-20 ${i <= stars ? "text-yellow-400" : "text-gray-700"}`} filled={i <= stars} />)}
                   </div>
-                  {stars < 3 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Sort expressions correctly on the first try to get more stars!</p>}
+                  {stars < 3 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Answer correctly on the first try to earn more stars!</p>}
                   <div className="flex flex-col gap-4 mt-8">
-                    <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
-                    <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Back to Map</button>
+                    {stars === 1 && (
+                      <>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Save & Exit</button>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                      </>
+                    )}
+                    {stars === 2 && (
+                      <>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                      </>
+                    )}
+                    {stars === 3 && (
+                      <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                    )}
                   </div>
                 </>
               );

@@ -79,7 +79,7 @@ const WebLevel: React.FC<WebLevelProps> = ({ onComplete, url, topic }) => {
             Ready to continue your journey?
           </p>
           <button
-            onClick={() => onComplete(1)}
+            onClick={() => onComplete(3)}
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 px-16 rounded-[1.5rem] shadow-[0_20px_50px_rgba(16,185,129,0.3)] transition-all transform hover:scale-105 active:scale-95 uppercase tracking-widest text-xl border-b-4 border-emerald-800"
           >
             Finished Viewing

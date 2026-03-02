@@ -95,7 +95,7 @@ const TermBin: React.FC<{
   );
 };
 
-const LikeTermsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress }) => {
+const LikeTermsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress, onNext }) => {
   const [subPhase, setSubPhase] = useState<'sorting' | 'simplifying'>(() => partialProgress?.subPhase || 'sorting');
   const [maxSubPhaseReached, setMaxSubPhaseReached] = useState<boolean>(() => partialProgress?.maxSubPhaseReached || false);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
@@ -149,38 +149,29 @@ const LikeTermsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, pa
     });
 
     if (allCorrect) {
-      setFeedback({ type: 'correct', msg: "" });
+      setFeedback(null);
       setMaxSubPhaseReached(true);
-      setTimeout(() => {
-        setSubPhase('simplifying');
-        setFeedback(null);
-        setIsCheckingSorting(false);
-      }, 1500); 
+      setSubPhase('simplifying');
+      setAssignments({}); // Clear assignments to move all terms back to left box
+      setIsCheckingSorting(false);
     } else {
       setErrorCount(prev => prev + errors);
-      setFeedback({ type: 'incorrect', msg: "Try again! Check that each term matches the variable or constant type for its box." });
+      setFeedback({ type: 'incorrect', msg: "Try again! Use the colours to help you identify like terms!" });
     }
   };
 
   const handleSimplifySubmit = () => {
-    const isXCorrect = simplifyAnswers.x.replace(/\s/g, '').toLowerCase() === '5x';
-    const isYCorrect = simplifyAnswers.y.replace(/\s/g, '').toLowerCase() === '4y';
-    const isConstCorrect = simplifyAnswers.constant.replace(/\s/g, '').toLowerCase() === '-4';
-
-    const newFeedback = {
-      x: isXCorrect ? 'correct' : 'incorrect',
-      y: isYCorrect ? 'correct' : 'incorrect',
-      constant: isConstCorrect ? 'correct' : 'incorrect'
-    } as const;
-
-    setSimplifyFeedback(newFeedback);
-
-    if (isXCorrect && isYCorrect && isConstCorrect) {
-      setFeedback({ type: 'correct', msg: "Great job! The simplified expression is 5x + 4y - 4!" });
-      setIsSimplifyingComplete(true);
+    // Check if all terms are correctly placed in their bins
+    const allCorrect = TASK1_TERMS.every(t => assignments[t.id] === t.category);
+    
+    if (allCorrect) {
+      setFeedback({ type: 'correct', msg: "Great job!" });
+      setTimeout(() => {
+        setIsGameOver(true);
+      }, 1500);
     } else {
       setErrorCount(prev => prev + 1);
-      setFeedback({ type: 'incorrect', msg: "Check your addition/subtraction in the boxes." });
+      setFeedback({ type: 'incorrect', msg: "Try again! Add the x-terms together, add the y-terms together, and keep the constant as it is." });
     }
   };
 
@@ -223,24 +214,22 @@ const LikeTermsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, pa
       </div>
 
       <div className="bg-gray-800 border-l-[6px] border-indigo-500 p-8 rounded-r-3xl mb-12 w-full shadow-2xl">
-        <h2 className="text-2xl font-black uppercase tracking-tight mb-2">
-          {subPhase === 'sorting' ? 'Step 1: Sort the terms' : 'Step 2: Simplify the collected terms'}
-        </h2>
-        <p className="text-slate-200 text-xl md:text-2xl font-bold italic">
+        <p className="text-slate-200 text-xl md:text-2xl font-bold">
           {subPhase === 'sorting' 
-            ? "Sort the terms into the correct boxes. (Use the colors to help you identify like terms!)"
-            : "Now combine the values in each box into a single term."}
+            ? "Sort the terms into the correct boxes."
+            : "Now add the like terms in each box."}
         </p>
-        <div className="mt-6 p-6 bg-gray-950 rounded-2xl text-5xl font-mono text-center flex justify-center gap-8 shadow-inner border border-gray-800">
-          {TASK1_TERMS.map(t => (
-            <span key={t.id} className={`${t.color} ${assignments[t.id] && subPhase === 'sorting' ? 'opacity-10 scale-90' : 'transition-all duration-500'}`}>{t.display}</span>
-          ))}
-        </div>
+        {subPhase === 'sorting' && (
+          <div className="mt-6 p-6 bg-gray-950 rounded-2xl text-5xl font-mono text-center flex justify-center gap-8 shadow-inner border border-gray-800">
+            {TASK1_TERMS.map(t => (
+              <span key={t.id} className={`${t.color} ${assignments[t.id] ? 'opacity-10 scale-90' : 'transition-all duration-500'}`}>{t.display}</span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 w-full items-start">
         <div className="bg-gray-800/40 p-8 rounded-[2rem] border border-gray-700 min-h-[250px] shadow-xl">
-          <h3 className="text-gray-500 font-bold uppercase text-[10px] mb-6 text-center tracking-[0.3em]">Expressions</h3>
           <div className="flex flex-wrap gap-4 justify-center">
             {TASK1_TERMS.filter(t => !assignments[t.id]).map(t => (
               <DraggableTerm key={t.id} term={t} />
@@ -250,50 +239,22 @@ const LikeTermsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, pa
 
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-8">
           {bins.map(bin => (
-            <div key={bin.id} className="flex flex-col gap-6">
-              <TermBin 
-                id={bin.id} 
-                label={bin.label} 
-                onDrop={(tid) => handleDrop(tid, bin.id)} 
-                onRemove={handleRemove}
-                assignedItems={TASK1_TERMS.filter(t => assignments[t.id] === bin.id)} 
-                isChecking={isCheckingSorting}
-              />
-              
-              {subPhase === 'simplifying' && (
-                <div className="animate-fade-in flex flex-col gap-3">
-                  <input
-                    type="text"
-                    placeholder="?"
-                    value={simplifyAnswers[bin.id as keyof typeof simplifyAnswers]}
-                    onChange={(e) => {
-                      setSimplifyAnswers(prev => ({ ...prev, [bin.id]: e.target.value }));
-                      setSimplifyFeedback(prev => ({ ...prev, [bin.id]: null }));
-                      setFeedback(null);
-                    }}
-                    className={`bg-gray-950 border-4 rounded-2xl px-5 py-4 text-3xl font-mono text-center focus:border-sky-400 outline-none shadow-2xl transition-all ${
-                      simplifyFeedback[bin.id] === 'correct' ? 'border-emerald-500 text-emerald-400' : 
-                      simplifyFeedback[bin.id] === 'incorrect' ? 'border-rose-500 text-rose-400' : 
-                      'border-indigo-500/50'
-                    }`}
-                  />
-                  <div className="h-8 text-center">
-                    {showHints && (
-                      <span className="text-purple-400 font-black text-sm uppercase tracking-widest italic animate-pulse">
-                        {bin.id === 'x' ? '2x + 3x = ?' : bin.id === 'y' ? '5y - y = ?' : '(constant term)'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <TermBin 
+              key={bin.id}
+              id={bin.id} 
+              label={bin.label} 
+              onDrop={(tid) => handleDrop(tid, bin.id)} 
+              onRemove={handleRemove}
+              assignedItems={TASK1_TERMS.filter(t => assignments[t.id] === bin.id)} 
+              isChecking={isCheckingSorting}
+            />
           ))}
         </div>
       </div>
 
       <div className="mt-16 flex flex-col items-center gap-8 w-full">
         {feedback && !isGameOver && (
-          <div className={`px-12 py-6 rounded-[2rem] font-black text-2xl shadow-2xl animate-fade-in border-4 flex items-center gap-4 max-w-4xl ${
+          <div className={`mb-6 px-12 py-6 rounded-[2rem] font-black text-2xl shadow-2xl animate-fade-in border-4 flex items-center gap-4 max-w-4xl mx-auto justify-center ${
             feedback.type === 'correct' ? 'bg-emerald-600 border-emerald-400' : 'bg-rose-700 border-rose-500 animate-shake'
           }`}>
             {feedback.type === 'correct' && '✨'} {feedback.msg}
@@ -309,54 +270,52 @@ const LikeTermsLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit, pa
               Check
             </button>
           ) : (
-            <>
-              {!isSimplifyingComplete && (
-                <button
-                    onClick={() => setShowHints(prev => !prev)}
-                    className="bg-purple-600 hover:bg-purple-500 p-5 rounded-2xl font-black shadow-2xl transition-all active:scale-95 flex items-center justify-center"
-                    title="Hint"
-                >
-                    <Lightbulb className="w-8 h-8" />
-                </button>
-              )}
-              {isSimplifyingComplete ? (
-                <button
-                    onClick={() => setIsGameOver(true)}
-                    className="bg-emerald-600 hover:bg-emerald-500 px-16 py-5 rounded-2xl font-black text-2xl shadow-2xl transition-all active:scale-95 uppercase tracking-tighter animate-bounce"
-                >
-                    Finish
-                </button>
-              ) : (
-                <button
-                    onClick={handleSimplifySubmit}
-                    className="bg-sky-600 hover:bg-sky-500 px-12 py-5 rounded-2xl font-black text-2xl shadow-2xl transition-all active:scale-95 uppercase tracking-tighter"
-                >
-                    Check
-                </button>
-              )}
-            </>
+            <button
+              onClick={handleSimplifySubmit}
+              className="bg-sky-600 hover:bg-sky-500 px-12 py-5 rounded-2xl font-black text-2xl shadow-2xl transition-all active:scale-95 uppercase tracking-tighter"
+            >
+              Check
+            </button>
           )}
         </div>
       </div>
 
       {isGameOver && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
+        <div className="fixed inset-0 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
           <div className="bg-slate-900 rounded-[3rem] shadow-2xl p-12 max-w-lg w-full text-center text-white border-[12px] border-slate-800/50">
             {(() => {
               const stars = calculateStars();
-              const isLow = stars === 1;
               return (
                 <>
-                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${isLow ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
-                    {isLow ? "Good effort!" : "Level Complete!"}
+                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${stars === 1 ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
+                    {stars === 1 ? "Good Effort!" : "Level Complete!"}
                   </h2>
+                  {stars === 1 && (
+                    <div className="mb-6">
+                      <p className="text-lg text-white font-black mb-2 uppercase tracking-tight">You need 2 stars to unlock the next level.</p>
+                      <p className="text-sm text-slate-400 font-black uppercase tracking-widest">Answer correctly on the first try to earn more stars!</p>
+                    </div>
+                  )}
                   <div className="flex justify-center gap-3 mb-6">
                     {[1, 2, 3].map(i => <StarIcon key={i} className={`w-20 h-20 ${i <= stars ? "text-yellow-400" : "text-gray-700"}`} filled={i <= stars} />)}
                   </div>
-                  {stars < 3 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Simplify expressions with fewer errors to earn 3 stars!</p>}
+                  {stars === 2 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Answer correctly on the first try to earn more stars!</p>}
                   <div className="flex flex-col gap-4 mt-8">
-                    <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
-                    <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Back to Map</button>
+                    {stars === 1 && (
+                      <>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Save & Exit</button>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                      </>
+                    )}
+                    {stars === 2 && (
+                      <>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                      </>
+                    )}
+                    {stars === 3 && (
+                      <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                    )}
                   </div>
                 </>
               );

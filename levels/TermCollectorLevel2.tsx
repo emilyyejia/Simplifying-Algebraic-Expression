@@ -16,7 +16,7 @@ const StarIcon: React.FC<{ filled: boolean; className?: string }> = ({ filled, c
   </svg>
 );
 
-const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress }) => {
+const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress, onNext }) => {
   const [subTask, setSubTask] = useState<SubTask>(() => partialProgress?.subTask || 1);
   const [maxSubTask, setMaxSubTask] = useState<SubTask>(() => partialProgress?.maxSubTask || 1);
   const [feedback, setFeedback] = useState<{ type: 'correct' | 'incorrect'; msg?: string } | null>(null);
@@ -30,22 +30,34 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
   const [t1Errors, setT1Errors] = useState([false, false, false]);
 
   // Task 2 State
-  const [t2Step, setT2Step] = useState(1); 
-  const [t2Jan, setT2Jan] = useState('');
-  const [t2Sum, setT2Sum] = useState(['', '', '']);
-  const [t2Simplified, setT2Simplified] = useState('');
-  const [t2Blocks, setT2Blocks] = useState<{jan: number, feb: number, mar: number}>({jan: 0, feb: 0, mar: 0});
-  const [isVisualizationConfirmed, setIsVisualizationConfirmed] = useState(false);
+  const [t2Step, setT2Step] = useState(() => partialProgress?.t2Step || 1); 
+  const [t2Jan, setT2Jan] = useState(() => partialProgress?.t2Jan || '');
+  const [t2Sum, setT2Sum] = useState(() => partialProgress?.t2Sum || ['', '', '']);
+  const [t2Simplified, setT2Simplified] = useState(() => partialProgress?.t2Simplified || '');
+  const [t2Blocks, setT2Blocks] = useState<{jan: number, feb: number, mar: number}>(() => partialProgress?.t2Blocks || {jan: 0, feb: 0, mar: 0});
+  const [isVisualizationConfirmed, setIsVisualizationConfirmed] = useState(() => partialProgress?.isVisualizationConfirmed || false);
 
   // Task 3 State
-  const [t3Answer, setT3Answer] = useState('');
+  const [t3Answer, setT3Answer] = useState(() => partialProgress?.t3Answer || '');
 
   const isCompletedRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (!isCompletedRef.current && onSavePartialProgress && !isGameOver) {
-        onSavePartialProgress({ subTask, maxSubTask });
+        onSavePartialProgress({ 
+          subTask, 
+          maxSubTask,
+          t1Answers,
+          t1Complete,
+          t2Step,
+          t2Jan,
+          t2Sum,
+          t2Simplified,
+          t2Blocks,
+          isVisualizationConfirmed,
+          t3Answer
+        });
       }
     };
   }, [onSavePartialProgress, subTask, maxSubTask, isGameOver]);
@@ -53,7 +65,7 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
   const normalizeInput = (input: string) => input.replace(/\s+/g, '').replace(/\^/g, '').toLowerCase();
 
   const handleCorrect = (nextTask?: SubTask) => {
-    setFeedback({ type: 'correct', msg: 'Correct!' });
+    setFeedback({ type: 'correct', msg: 'Excellent job!' });
     setTimeout(() => {
       setFeedback(null);
       if (nextTask) {
@@ -153,7 +165,7 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
     if (val === '6t3') {
       handleCorrect();
     } else {
-      handleIncorrect("Group the t³ terms and constants! (2t³ + 3t³ + t³) + (1 + 4 - 5) = ?");
+      handleIncorrect("Perimeter is the sum of all sides. Add up the t³ terms and the numbers separately!");
     }
   };
 
@@ -194,19 +206,21 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
           {([1, 2, 3] as SubTask[]).map(i => (
             <button 
               key={i} 
-              onClick={() => setSubTask(i)}
+              onClick={() => i <= maxSubTask && setSubTask(i)}
+              disabled={i > maxSubTask}
               className={`w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center ${
                   subTask === i ? 'bg-sky-500 border-sky-300 scale-125 shadow-glow' : 
-                  'bg-sky-900 border-sky-600 hover:bg-sky-500'
+                  i <= maxSubTask ? 'bg-sky-900 border-sky-600 hover:bg-sky-500' :
+                  'bg-gray-700 border-gray-600 cursor-not-allowed opacity-50'
               }`}
-              title={`Go to Task ${i}`}
+              title={i <= maxSubTask ? `Go to Task ${i}` : `Complete Task ${i - 1} first`}
             />
           ))}
         </div>
       </div>
 
       {feedback && !isGameOver && subTask !== 1 && (
-        <div className={`fixed top-24 px-12 py-5 rounded-[2rem] font-black text-2xl shadow-2xl z-[200] animate-fade-in border-4 ${
+        <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 px-12 py-5 rounded-[2rem] font-black text-2xl shadow-2xl z-[200] animate-fade-in border-4 max-w-2xl text-center ${
           feedback.type === 'correct' ? 'bg-emerald-600 border-emerald-400' : 'bg-rose-700 border-rose-500 animate-shake'
         }`}>
           {feedback.msg}
@@ -371,7 +385,7 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
                         onClick={validateVisualization}
                         className="mt-4 bg-indigo-600 hover:bg-indigo-500 text-white px-12 py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all shadow-2xl active:scale-95 border-b-4 border-indigo-800"
                     >
-                        Confirm Visualization
+                        Check
                     </button>
                 )}
               </div>
@@ -381,7 +395,6 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
 
         {subTask === 3 && (
           <div className="animate-fade-in flex flex-col items-center">
-            <h2 className="text-3xl font-black mb-2 text-sky-400 self-start italic tracking-tighter uppercase">3. Geometry Perimeter</h2>
             <p className="text-slate-300 mb-12 self-start text-xl font-medium leading-relaxed italic">
                 Write an algebraic expression for the perimeter of the triangle. <strong className="text-white">Simplify your answer.</strong>
             </p>
@@ -399,7 +412,6 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
 
               <div className="flex-grow space-y-8 w-full max-w-lg">
                 <div className="bg-slate-950 p-8 rounded-[2.5rem] border-4 border-slate-700 shadow-2xl">
-                  <h3 className="text-xl font-black mb-6 text-slate-400 uppercase tracking-[0.2em] italic">Perimeter Equation:</h3>
                   <div className="flex flex-col gap-6">
                     <input 
                       type="text" value={t3Answer} onChange={e => { setT3Answer(e.target.value); setFeedback(null); }}
@@ -411,7 +423,6 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
                 </div>
                 {feedback?.type === 'incorrect' && (
                   <div className="p-6 bg-indigo-900/40 border-l-8 border-indigo-500 rounded-2xl text-lg text-indigo-100 italic leading-relaxed shadow-xl">
-                    <strong className="text-indigo-300 uppercase block mb-1">Helpful Hint:</strong>
                     Perimeter is the sum of all sides. Add up the <span className="font-mono bg-slate-900 px-2 rounded font-black">t³</span> terms and the numbers separately!
                   </div>
                 )}
@@ -422,23 +433,41 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
       </div>
 
       {isGameOver && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
+        <div className="fixed inset-0 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
           <div className="bg-slate-900 rounded-[3rem] shadow-2xl p-12 max-w-lg w-full text-center text-white border-[12px] border-slate-800/50">
             {(() => {
               const stars = calculateStars();
-              const isLow = stars === 1;
               return (
                 <>
-                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${isLow ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
-                    {isLow ? "Good effort!" : "Level Complete!"}
+                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${stars === 1 ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
+                    {stars === 1 ? "Good Effort!" : "Level Complete!"}
                   </h2>
+                  {stars === 1 && (
+                    <div className="mb-6">
+                      <p className="text-lg text-white font-black mb-2 uppercase tracking-tight">You need 2 stars to unlock the next level.</p>
+                      <p className="text-sm text-slate-400 font-black uppercase tracking-widest">Answer correctly on the first try to earn more stars!</p>
+                    </div>
+                  )}
                   <div className="flex justify-center gap-3 mb-6">
                     {[1, 2, 3].map(i => <StarIcon key={i} className={`w-20 h-20 ${i <= stars ? "text-yellow-400" : "text-gray-700"}`} filled={i <= stars} />)}
                   </div>
-                  {stars < 3 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Complete all tasks with fewer errors to earn 3 stars!</p>}
+                  {stars === 2 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Answer correctly on the first try to earn more stars!</p>}
                   <div className="flex flex-col gap-4 mt-8">
-                    <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
-                    <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Back to Map</button>
+                    {stars === 1 && (
+                      <>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Save & Exit</button>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                      </>
+                    )}
+                    {stars === 2 && (
+                      <>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                      </>
+                    )}
+                    {stars === 3 && (
+                      <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                    )}
                   </div>
                 </>
               );

@@ -46,8 +46,10 @@ export const usePlayerProgress = (lessons: Lesson[]): UsePlayerProgressReturn =>
   const completeLevel = useCallback((levelId: string, stars: number) => {
     setProgress(prevProgress => {
       const currentStars = prevProgress[levelId] || 0;
+      // Ensure stars is at least 1 (safety check)
+      const validStars = Math.max(1, Math.min(3, stars));
       // Only update if the new score is higher
-      const newStars = Math.max(currentStars, stars);
+      const newStars = Math.max(currentStars, validStars);
       
       if (newStars === currentStars) {
         return prevProgress; // No change

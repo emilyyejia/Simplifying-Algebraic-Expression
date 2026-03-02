@@ -91,8 +91,36 @@ const LESSON_DEFINITIONS: Lesson[] = [
     }
 ];
 
-const getLevelStatus = (levelId: string, progress: PlayerProgress): LevelStatus => {
-    if ((progress[levelId] || 0) >= 1) return LevelStatus.COMPLETED;
+const getLevelStatus = (
+    levelId: string, 
+    progress: PlayerProgress, 
+    previousLevelId?: string,
+    isPreviousLessonComplete?: boolean
+): LevelStatus => {
+    // If previous lesson is not complete, lock this level
+    if (isPreviousLessonComplete === false) {
+        return LevelStatus.LOCKED;
+    }
+    
+    const currentStars = progress[levelId] || 0;
+    
+    // If current level has stars, it's completed
+    if (currentStars >= 1) return LevelStatus.COMPLETED;
+    
+    // If there's a previous level in the same lesson, it must be completed with at least 2 stars
+    if (previousLevelId) {
+        const previousStars = progress[previousLevelId] || 0;
+        // Fix for corrupted data: if this level has no stars but should be accessible
+        // (i.e., no previous level or previous level has at least 1 star), unlock it
+        if (previousStars < 1) {
+            return LevelStatus.LOCKED;
+        }
+        // Require 2+ stars to unlock next level
+        if (previousStars < 2) {
+            return LevelStatus.LOCKED;
+        }
+    }
+    
     return LevelStatus.UNLOCKED;
 };
 
@@ -103,12 +131,18 @@ const LevelNode: React.FC<{
     onSelectLevel: (id: string) => void;
 }> = ({ level, status, stars, onSelectLevel }) => {
     const isCompleted = status === LevelStatus.COMPLETED;
+    const isLocked = status === LevelStatus.LOCKED;
 
     return (
         <div className="flex flex-col items-center gap-3 min-w-[120px]">
             <div 
-                className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 relative bg-[#1e70e9] border-[5px] border-[#1e70e9]/50 hover:scale-110 active:scale-95 cursor-pointer z-10"
-                onClick={() => onSelectLevel(level.id)}
+                className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 relative ${
+                    isLocked 
+                        ? 'bg-gray-700 border-[5px] border-gray-600/50 cursor-not-allowed opacity-50' 
+                        : 'bg-[#1e70e9] border-[5px] border-[#1e70e9]/50 hover:scale-110 active:scale-95 cursor-pointer'
+                } z-10`}
+                onClick={() => !isLocked && onSelectLevel(level.id)}
+                title={isLocked ? 'Complete previous level with 2+ stars first' : ''}
             >
                 <PlayIcon className="w-10 h-10 text-white" />
             </div>
@@ -128,28 +162,54 @@ const LevelNode: React.FC<{
     );
 };
 
-const LessonBlock: React.FC<{ lesson: any; progress: PlayerProgress; onSelectLevel: (id: string) => void }> = ({ lesson, progress, onSelectLevel }) => {
+const LessonBlock: React.FC<{ 
+    lesson: any; 
+    progress: PlayerProgress; 
+    onSelectLevel: (id: string) => void;
+    previousLesson?: any;
+}> = ({ lesson, progress, onSelectLevel, previousLesson }) => {
+    // Check if previous lesson is complete (all levels have 2+ stars)
+    const isPreviousLessonComplete = previousLesson 
+        ? previousLesson.levels.every((level: Level) => (progress[level.id] || 0) >= 2)
+        : true; // First lesson is always unlocked
+
     return (
         <div className="relative p-10 pt-8 rounded-2xl border-[1px] border-slate-700/50 bg-[#161f2d] shadow-2xl flex flex-col items-center z-10">
             <h3 className="text-[18px] font-black text-blue-400 mb-8 tracking-widest text-center">
                 {lesson.title}
             </h3>
             <div className="flex items-start gap-12">
-                {lesson.levels.map((level: Level) => (
-                    <LevelNode 
-                        key={level.id} 
-                        level={level} 
-                        status={getLevelStatus(level.id, progress)} 
-                        stars={progress[level.id] || 0}
-                        onSelectLevel={onSelectLevel}
-                    />
-                ))}
+                {lesson.levels.map((level: Level, index: number) => {
+                    const status = getLevelStatus(
+                        level.id, 
+                        progress, 
+                        index > 0 ? lesson.levels[index - 1].id : undefined,
+                        isPreviousLessonComplete
+                    );
+                    return (
+                        <LevelNode 
+                            key={level.id}
+                            level={level}
+                            status={status}
+                            stars={progress[level.id] || 0}
+                            onSelectLevel={onSelectLevel}
+                        />
+                    );
+                })}
             </div>
         </div>
     );
 };
 
-const BonusMissionBlock: React.FC<{ lesson: any; progress: PlayerProgress; onSelectLevel: (id: string) => void }> = ({ lesson, progress, onSelectLevel }) => {
+const BonusMissionBlock: React.FC<{ 
+    lesson: any; 
+    progress: PlayerProgress; 
+    onSelectLevel: (id: string) => void;
+    parentLesson: any;
+}> = ({ lesson, progress, onSelectLevel, parentLesson }) => {
+    // Bonus missions require parent lesson to be complete
+    const isParentLessonComplete = parentLesson.levels.every((level: Level) => (progress[level.id] || 0) >= 2);
+
     return (
         <div className="relative flex flex-col items-center z-10">
             <div className="w-[4px] h-12 bg-slate-700/50 z-0"></div>
@@ -160,22 +220,35 @@ const BonusMissionBlock: React.FC<{ lesson: any; progress: PlayerProgress; onSel
                 </div>
                 
                 <div className="flex gap-6 mt-4">
-                    {lesson.levels.map((level: Level) => {
-                        const status = getLevelStatus(level.id, progress);
+                    {lesson.levels.map((level: Level, index: number) => {
+                        const status = getLevelStatus(
+                            level.id, 
+                            progress, 
+                            index > 0 ? lesson.levels[index - 1].id : undefined,
+                            isParentLessonComplete
+                        );
                         const isCompleted = status === LevelStatus.COMPLETED;
+                        const isLocked = status === LevelStatus.LOCKED;
                         const stars = progress[level.id] || 0;
                         
                         return (
                             <div key={level.id} className="flex flex-col items-center gap-2">
                                 <div 
-                                    className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 relative bg-[#1e70e9] border-[4px] border-[#1e70e9]/50 hover:scale-110 active:scale-95 cursor-pointer z-10"
-                                    onClick={() => onSelectLevel(level.id)}
+                                    className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 relative ${
+                                        isLocked 
+                                            ? 'bg-gray-700 border-[4px] border-gray-600/50 cursor-not-allowed opacity-50' 
+                                            : 'bg-[#1e70e9] border-[4px] border-[#1e70e9]/50 hover:scale-110 active:scale-95 cursor-pointer'
+                                    } z-10`}
+                                    onClick={() => !isLocked && onSelectLevel(level.id)}
+                                    title={isLocked ? 'Complete previous level with 2+ stars first' : ''}
                                 >
                                     <PlayIcon className="w-8 h-8 text-white" />
                                 </div>
                                 
-                                <div className="flex justify-center">
-                                    <StarIcon filled={stars >= 1} className="w-5 h-5" />
+                                <div className="flex justify-center gap-1">
+                                    {[1, 2, 3].map(i => (
+                                        <StarIcon key={i} filled={i <= stars} className="w-5 h-5" />
+                                    ))}
                                 </div>
                             </div>
                         );
@@ -229,12 +302,22 @@ const LevelMap: React.FC<{
                 {LESSON_DEFINITIONS.map((lesson, idx) => (
                     <React.Fragment key={idx}>
                         <div className="relative z-10 flex-shrink-0">
-                            <LessonBlock lesson={lesson} progress={progress} onSelectLevel={onSelectLevel} />
+                            <LessonBlock 
+                                lesson={lesson} 
+                                progress={progress} 
+                                onSelectLevel={onSelectLevel}
+                                previousLesson={idx > 0 ? LESSON_DEFINITIONS[idx - 1] : undefined}
+                            />
                         </div>
                         
                         {lesson.bonus && (
                             <div className="relative z-10 flex-shrink-0 self-start mt-[234px]">
-                                <BonusMissionBlock lesson={lesson.bonus} progress={progress} onSelectLevel={onSelectLevel} />
+                                <BonusMissionBlock 
+                                    lesson={lesson.bonus} 
+                                    progress={progress} 
+                                    onSelectLevel={onSelectLevel}
+                                    parentLesson={lesson}
+                                />
                             </div>
                         )}
                     </React.Fragment>
@@ -274,6 +357,21 @@ function App() {
         lesson.bonus?.levels.some(l => l.id === currentLevelId)
     )?.title || (currentLevel?.topic);
 
+    // Find the next level in the same lesson
+    const findNextLevel = (currentId: string): string | null => {
+        for (const lesson of LESSON_DEFINITIONS) {
+            const levelIndex = lesson.levels.findIndex(l => l.id === currentId);
+            if (levelIndex !== -1 && levelIndex < lesson.levels.length - 1) {
+                // There's a next level in the same lesson
+                return lesson.levels[levelIndex + 1].id;
+            }
+        }
+        return null; // No next level (last level in lesson)
+    };
+
+    const nextLevelId = currentLevelId ? findNextLevel(currentLevelId) : null;
+    const handleNext = nextLevelId ? () => setCurrentLevelId(nextLevelId) : undefined;
+
     return (
         <DndProvider backend={HTML5Backend}>
             <ToolbarProvider>
@@ -287,7 +385,8 @@ function App() {
                             partialProgress={partialProgress[currentLevelId!]} 
                             onSavePartialProgress={(state) => savePartialProgress(currentLevelId!, state)} 
                             progress={progress} 
-                            lessonTitle={lessonTitle} 
+                            lessonTitle={lessonTitle}
+                            onNext={handleNext}
                         />
                     ) : (
                         <LevelMap 

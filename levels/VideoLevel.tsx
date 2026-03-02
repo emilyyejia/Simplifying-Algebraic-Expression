@@ -86,7 +86,7 @@ const VideoLevel: React.FC<VideoLevelProps> = ({ onComplete, onExit, url, topic,
     if (watchPercentage >= 0.95) {
       isCompletedRef.current = true; // Mark as completed
       onSavePartialProgress?.(null); // Clear any partial progress
-      onComplete(1);
+      onComplete(3);
       setCompletionStatus('success');
     } else {
       setCompletionStatus('incomplete');

@@ -14,18 +14,18 @@ const QUESTIONS: Question[] = [
   {
     id: 1,
     type: 'single',
-    question: <>Which expression is equivalent to <span className="font-mono text-sky-400 font-bold">2x³ - 4x + 3x² + 7 - 4x + x²</span>?</>,
+    question: <>Simplify <span className="font-mono text-sky-400 font-bold">2x³ - 4x + 3x² + 7 - 4x + x²</span></>,
     options: ['2x³ + 4x² - 4x + 7', '2x³ + 4x² - 8x + 7', '2x³ + 3x² - 8x + 7', '2x³ + 4x² + 7'],
     correct: ['2x³ + 4x² - 8x + 7'],
-    hint: 'Group like terms: x² terms together (3x² + x²) and x terms together (-4x - 4x).'
+    hint: 'Try again! Collect the like terms: x² terms together and x terms together'
   },
   {
     id: 2,
     type: 'single',
-    question: <>In a video game, a player <span className="text-sky-400 font-black">earns</span> <span className="font-mono text-sky-300 font-bold">2x³</span> points in Level 1 and <span className="text-sky-400 font-black">earns</span> <span className="font-mono text-sky-300 font-bold">3x³</span> points in Level 2. The player <span className="text-orange-400 font-black">loses 5 points</span> due to a penalty, but <span className="text-sky-400 font-black">earns</span> <span className="text-emerald-400 font-black">a bonus of x points</span>. Which expression represents the total points?</>,
+    question: <>In a video game, a player earns 2x³ points in Level 1 and earns 3x³ points in Level 2. The player loses 5 points due to a penalty, but earns a bonus of x points. Which expression represents the total points?</>,
     options: ['5x³ + x', '5x³ - 5', '5x³ + x - 5', '5x³ + x + 5'],
     correct: ['5x³ + x - 5'],
-    hint: 'Add the two level scores, add the bonus, then subtract the penalty.'
+    hint: "Try again! 'Earns' means add. 'Loses' means subtract."
   },
   {
     id: 3,
@@ -33,7 +33,7 @@ const QUESTIONS: Question[] = [
     question: <>A class raises <span className="font-mono font-bold">7y</span> dollars selling cookies and <span className="font-mono font-bold">y</span> dollars selling drinks. They also receive a donation of 20 dollars. Which expression represents the total amount raised?</>,
     options: ['8y', '8y + 20', '7y + 20', '7y + x + 20'],
     correct: ['8y + 20'],
-    hint: 'Combine the variable items (7y + y) and then add the constant donation.'
+    hint: "Try again! Both 'raises' and 'donation' mean you are getting money."
   },
   {
     id: 4,
@@ -41,7 +41,7 @@ const QUESTIONS: Question[] = [
     question: <>Select <strong className="text-amber-400">TWO</strong> expressions that simplify to <span className="font-mono text-emerald-400 font-bold text-3xl">3x + 7</span>.</>,
     options: ['x + 2x - 7', '5x - 2x + 7', '4x + x² - x + 7', 'x³ - x³ + 3 + 4 + 3x'],
     correct: ['5x - 2x + 7', 'x³ - x³ + 3 + 4 + 3x'],
-    hint: 'Combine like terms. Put the x terms together and the numbers together.'
+    hint: 'Collect the x-terms and the constant numbers. Look for the ones that equal 3x + 7.'
   }
 ];
 
@@ -58,7 +58,7 @@ const StarIcon: React.FC<{ filled: boolean; className?: string }> = ({ filled, c
   </svg>
 );
 
-const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress }) => {
+const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress, onNext }) => {
   const [currentIdx, setCurrentIdx] = useState(() => partialProgress?.currentIdx || 0);
   const [maxReachedIdx, setMaxReachedIdx] = useState(() => partialProgress?.maxReachedIdx || 0);
   const [selected, setSelected] = useState<string[]>([]);
@@ -104,19 +104,19 @@ const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, on
       }, 1500);
     } else {
       setErrorCount(e => e + 1);
-      setFeedback({ type: 'incorrect', msg: `Tip: ${currentQ.hint}` });
+      setFeedback({ type: 'incorrect', msg: currentQ.hint });
     }
   };
 
   const handleGeoAnswer = (ans: string) => {
-    if (ans === '21x² + 4x') { 
+    if (ans === '17x² + 4x') { 
       setFeedback({ type: 'correct', msg: 'Great!' });
       setTimeout(() => {
         setIsGameOver(true);
       }, 1500);
     } else {
       setErrorCount(e => e + 1);
-      setFeedback({ type: 'incorrect', msg: 'Tip: Draw one line to divide the shape into two rectangles. Find the area of each rectangle! (Rectangle 1: 5x * 4x. Rectangle 2: x * (x + 4)). Then combine them.' });
+      setFeedback({ type: 'incorrect', msg: 'Draw one line to divide the shape into two rectangles. Find the area of each rectangle, then add them.' });
     }
   };
 
@@ -138,10 +138,6 @@ const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, on
   return (
     <div className="flex flex-col items-center justify-start min-h-full p-8 text-white font-sans max-w-7xl mx-auto overflow-y-auto">
       <div className="w-full flex flex-col items-center mb-10 border-b border-gray-800 pb-6">
-        <h1 className="text-2xl md:text-3xl font-black text-sky-400 italic tracking-tighter uppercase text-center mb-4">
-          Combine & Conquer
-        </h1>
-        
         <div className="flex justify-center gap-4 mb-2">
           {Array.from({ length: QUESTIONS.length + 1 }).map((_, i) => (
             <button
@@ -160,7 +156,6 @@ const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, on
       <div className="w-full relative min-h-[500px]">
         {currentIdx < QUESTIONS.length ? (
           <div className="animate-fade-in">
-            <h2 className="text-slate-500 font-black uppercase tracking-[0.3em] text-xs mb-8 italic">Challenge Question {currentIdx + 1}</h2>
             <div className="text-3xl md:text-4xl font-bold mb-12 leading-[1.3] text-white tracking-tight">{currentQ.question}</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {currentQ.options.map(opt => (
@@ -193,7 +188,6 @@ const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, on
         ) : (
           <div className="animate-fade-in flex flex-col lg:flex-row gap-20 items-center">
             <div className="flex-1 w-full">
-               <h2 className="text-slate-500 font-black uppercase tracking-[0.3em] text-xs mb-8 italic">Final Mastery Task: Composite Area</h2>
                <p className="text-xl font-medium mb-10 text-sky-50 leading-tight">Find the total area expression for this composite shape:</p>
                <div className="bg-slate-900 p-10 rounded-[3rem] border-4 border-slate-800 flex justify-center shadow-inner relative group">
                   <svg viewBox="0 0 300 250" className="w-[450px] overflow-visible drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
@@ -207,7 +201,7 @@ const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, on
             </div>
             <div className="flex-1 space-y-6 w-full lg:max-w-md">
                <div className="grid grid-cols-1 gap-5">
-                 {['21x² + 4x', '20x² + 4', '25x²', '19x² + 4x'].map(ans => (
+                 {['21x² + 4x', '20x² + 4', '25x²', '17x² + 4x'].map(ans => (
                    <button key={ans} onClick={() => handleGeoAnswer(ans)} className="w-full p-8 bg-slate-900 border-4 border-slate-800 rounded-[1.5rem] text-4xl font-mono font-black text-center hover:border-emerald-500 hover:text-emerald-400 transition-all active:scale-95 shadow-xl">{ans}</button>
                  ))}
                </div>
@@ -228,23 +222,41 @@ const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, on
       </div>
 
       {isGameOver && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
+        <div className="fixed inset-0 backdrop-blur-2xl flex items-center justify-center z-[300] p-6 animate-fade-in">
           <div className="bg-slate-900 rounded-[3rem] shadow-2xl p-12 max-w-lg w-full text-center text-white border-[12px] border-slate-800/50">
             {(() => {
               const stars = calculateStars();
-              const isLow = stars === 1;
               return (
                 <>
-                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${isLow ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
-                    {isLow ? "Good effort!" : "Mastery complete!"}
+                  <h2 className={`font-black mb-4 italic tracking-tighter uppercase ${stars === 1 ? 'text-emerald-400 text-4xl' : 'text-sky-400 text-5xl'}`}>
+                    {stars === 1 ? "Good Effort!" : "Level Complete!"}
                   </h2>
+                  {stars === 1 && (
+                    <div className="mb-6">
+                      <p className="text-lg text-white font-black mb-2 uppercase tracking-tight">You need 2 stars to unlock the next level.</p>
+                      <p className="text-sm text-slate-400 font-black uppercase tracking-widest">Answer correctly on the first try to earn more stars!</p>
+                    </div>
+                  )}
                   <div className="flex justify-center gap-3 mb-6">
                     {[1, 2, 3].map(i => <StarIcon key={i} className={`w-20 h-20 ${i <= stars ? "text-yellow-400" : "text-gray-700"}`} filled={i <= stars} />)}
                   </div>
-                  {stars < 3 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Complete the test with fewer errors to earn 3 stars!</p>}
+                  {stars === 2 && <p className="text-sm text-slate-400 mb-10 font-black uppercase tracking-widest">Answer correctly on the first try to earn more stars!</p>}
                   <div className="flex flex-col gap-4 mt-8">
-                    <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
-                    <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Back to Map</button>
+                    {stars === 1 && (
+                      <>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); }} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">Save & Exit</button>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                      </>
+                    )}
+                    {stars === 2 && (
+                      <>
+                        <button onClick={handleReplay} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-[1.5rem] transition-all text-xl uppercase tracking-tighter shadow-sm">Replay</button>
+                        <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                      </>
+                    )}
+                    {stars === 3 && (
+                      <button onClick={() => { isCompletedRef.current = true; onComplete(stars); if (onNext) { onNext(); } }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[1.5rem] transition-all shadow-xl text-xl uppercase tracking-tighter">{onNext ? 'Next Level' : 'Back to Map'}</button>
+                    )}
                   </div>
                 </>
               );
@@ -252,8 +264,6 @@ const CombineAndConquerLevel3: React.FC<LevelComponentProps> = ({ onComplete, on
           </div>
         </div>
       )}
-
-      <button onClick={onExit} className="mt-16 text-slate-600 hover:text-white underline font-black transition-all uppercase tracking-[0.4em] text-[10px]">Abandon Mastery Attempt</button>
     </div>
   );
 };
