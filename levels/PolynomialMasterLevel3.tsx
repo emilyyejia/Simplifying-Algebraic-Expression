@@ -221,7 +221,7 @@ const PolynomialMasterLevel3: React.FC<LevelComponentProps> = ({ onComplete, onE
         <div className="w-full animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl mb-10 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <p className="text-slate-400 italic">Compare the expressions. <strong className="text-white">Drag each pair into the correct box.</strong></p>
+              <p className="text-slate-200 text-xl md:text-2xl font-bold">Compare the expressions. <strong className="text-white">Drag each pair into the correct box.</strong></p>
             </div>
             <button 
               onClick={checkSort}
