@@ -17,8 +17,8 @@ const StarIcon: React.FC<{ filled: boolean; className?: string }> = ({ filled, c
 );
 
 const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit, partialProgress, onSavePartialProgress, onNext }) => {
-  const [subTask, setSubTask] = useState<SubTask>(() => partialProgress?.subTask || 1);
-  const [maxSubTask, setMaxSubTask] = useState<SubTask>(() => partialProgress?.maxSubTask || 1);
+  const [subTask, setSubTask] = useState<SubTask>(1);
+  const [maxSubTask, setMaxSubTask] = useState<SubTask>(1);
   const [feedback, setFeedback] = useState<{ type: 'correct' | 'incorrect'; msg?: string } | null>(null);
   const [errorCount, setErrorCount] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
@@ -30,37 +30,26 @@ const TermCollectorLevel2: React.FC<LevelComponentProps> = ({ onComplete, onExit
   const [t1Errors, setT1Errors] = useState([false, false, false]);
 
   // Task 2 State
-  const [t2Step, setT2Step] = useState(() => partialProgress?.t2Step || 1); 
-  const [t2Jan, setT2Jan] = useState(() => partialProgress?.t2Jan || '');
-  const [t2Sum, setT2Sum] = useState(() => partialProgress?.t2Sum || ['', '', '']);
-  const [t2Simplified, setT2Simplified] = useState(() => partialProgress?.t2Simplified || '');
-  const [t2Blocks, setT2Blocks] = useState<{jan: number, feb: number, mar: number}>(() => partialProgress?.t2Blocks || {jan: 0, feb: 0, mar: 0});
-  const [isVisualizationConfirmed, setIsVisualizationConfirmed] = useState(() => partialProgress?.isVisualizationConfirmed || false);
+  const [t2Step, setT2Step] = useState(1); 
+  const [t2Jan, setT2Jan] = useState('');
+  const [t2Sum, setT2Sum] = useState(['', '', '']);
+  const [t2Simplified, setT2Simplified] = useState('');
+  const [t2Blocks, setT2Blocks] = useState<{jan: number, feb: number, mar: number}>({jan: 0, feb: 0, mar: 0});
+  const [isVisualizationConfirmed, setIsVisualizationConfirmed] = useState(false);
 
   // Task 3 State
-  const [t3Answer, setT3Answer] = useState(() => partialProgress?.t3Answer || '');
+  const [t3Answer, setT3Answer] = useState('');
 
   const isCompletedRef = useRef(false);
 
+  // Don't save or restore partial progress - always start fresh
   useEffect(() => {
     return () => {
       if (!isCompletedRef.current && onSavePartialProgress && !isGameOver) {
-        onSavePartialProgress({ 
-          subTask, 
-          maxSubTask,
-          t1Answers,
-          t1Complete,
-          t2Step,
-          t2Jan,
-          t2Sum,
-          t2Simplified,
-          t2Blocks,
-          isVisualizationConfirmed,
-          t3Answer
-        });
+        onSavePartialProgress(null);
       }
     };
-  }, [onSavePartialProgress, subTask, maxSubTask, isGameOver]);
+  }, [onSavePartialProgress, isGameOver]);
 
   const normalizeInput = (input: string) => input.replace(/\s+/g, '').replace(/\^/g, '').toLowerCase();
 
