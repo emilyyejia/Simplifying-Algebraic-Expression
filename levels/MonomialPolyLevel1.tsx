@@ -263,17 +263,19 @@ const MonomialPolyLevel1: React.FC<LevelComponentProps> = ({ onComplete, onExit,
               </div>
             </div>
 
-            <div className="bg-slate-900/60 p-10 rounded-[3rem] border-4 border-slate-800 w-full lg:w-[350px] shadow-2xl">
-              <div className="flex flex-col gap-5">
-                {CALC_BOXES.map(box => (
-                  !Object.values(assignments).includes(box.targetCategory) && 
-                  <DraggableCalculation key={box.id} box={box} onDragStart={() => setFeedback(null)} />
-                ))}
-                {unassignedItems.length === 0 && subPhase !== 'simplifying' && (
-                    <button onClick={() => setSubPhase('simplifying')} className="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl shadow-lg transition-all animate-pulse">START COMBINING</button>
-                )}
+            {subPhase !== 'simplifying' && (
+              <div className="bg-slate-900/60 p-10 rounded-[3rem] border-4 border-slate-800 w-full lg:w-[350px] shadow-2xl">
+                <div className="flex flex-col gap-5">
+                  {CALC_BOXES.map(box => (
+                    !Object.values(assignments).includes(box.targetCategory) && 
+                    <DraggableCalculation key={box.id} box={box} onDragStart={() => setFeedback(null)} />
+                  ))}
+                  {unassignedItems.length === 0 && subPhase !== 'simplifying' && (
+                      <button onClick={() => setSubPhase('simplifying')} className="w-full bg-sky-600 hover:bg-sky-500 text-white font-black py-4 rounded-xl shadow-lg transition-all animate-pulse">START COMBINING</button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {subPhase === 'simplifying' && (
